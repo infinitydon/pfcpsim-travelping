@@ -12,7 +12,7 @@ UPG-VPP `v2.0.0`.
 ## Container Image
 
 ```text
-ghcr.io/infinitydon/pfcpsim-travelping:v1.4.4-7
+ghcr.io/infinitydon/pfcpsim-travelping:v1.4.4-8
 ```
 
 Build locally:
@@ -49,7 +49,7 @@ The container includes both `pfcpsim` and `pfcpctl`.
 ```sh
 docker run --rm --network host \
   --name pfcpsim-travelping \
-  ghcr.io/infinitydon/pfcpsim-travelping:v1.4.4-7 \
+  ghcr.io/infinitydon/pfcpsim-travelping:v1.4.4-8 \
   --interface n4
 ```
 

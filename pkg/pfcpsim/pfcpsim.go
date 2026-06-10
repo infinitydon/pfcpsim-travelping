@@ -416,6 +416,7 @@ func (c *PFCPClient) SendSessionDeletionRequest(localSEID uint64, remoteSEID uin
 
 func (c *PFCPClient) StartHeartbeats() {
 	ticker := time.NewTicker(DefaultHeartbeatPeriod * time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {
@@ -424,7 +425,7 @@ func (c *PFCPClient) StartHeartbeats() {
 		case <-ticker.C:
 			err := c.SendAndRecvHeartbeat()
 			if err != nil {
-				return
+				logger.PfcpsimLog.Warnln("PFCP heartbeat failed; retrying:", err)
 			}
 		}
 	}
