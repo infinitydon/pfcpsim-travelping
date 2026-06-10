@@ -32,7 +32,7 @@ LABEL org.opencontainers.image.source="${VCS_URL}" \
     org.opencontainers.image.licenses="Apache-2.0" \
     org.opencontainers.image.documentation="https://github.com/infinitydon/pfcpsim-travelping"
 
-RUN apk add --no-cache tcpdump
+RUN apk add --no-cache ethtool tcpdump
 
 COPY --from=builder /pfcpctl/pfcp* /usr/local/bin
 
