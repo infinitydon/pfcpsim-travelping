@@ -126,6 +126,7 @@ func TestPDRBuilder(t *testing.T) {
 				ie.NewFARID(3),
 				ie.NewPDI(
 					ie.NewSourceInterface(ie.SrcInterfaceAccess),
+					ie.NewNetworkInstanceFQDN("access"),
 					ie.NewFTEID(0x01, 100, net.ParseIP("192.168.0.1"), nil, 0),
 					ie.NewSDFFilter("permit ip any to assigned", "", "", "", 1),
 				),
@@ -150,7 +151,8 @@ func TestPDRBuilder(t *testing.T) {
 				ie.NewFARID(3),
 				ie.NewPDI(
 					ie.NewSourceInterface(ie.SrcInterfaceCore),
-					ie.NewUEIPAddress(0x2, "172.16.0.1", "", 0, 0),
+					ie.NewNetworkInstanceFQDN("internet"),
+					ie.NewUEIPAddress(0x6, "172.16.0.1", "", 0, 0),
 					ie.NewSDFFilter("permit ip any to assigned", "", "", "", 1),
 				),
 				ie.NewQERID(4),
@@ -173,7 +175,8 @@ func TestPDRBuilder(t *testing.T) {
 				ie.NewFARID(3),
 				ie.NewPDI(
 					ie.NewSourceInterface(ie.SrcInterfaceCore),
-					ie.NewUEIPAddress(0x2, "172.16.0.1", "", 0, 0),
+					ie.NewNetworkInstanceFQDN("internet"),
+					ie.NewUEIPAddress(0x6, "172.16.0.1", "", 0, 0),
 				),
 				ie.NewQERID(4),
 			),
@@ -196,7 +199,8 @@ func TestPDRBuilder(t *testing.T) {
 					ie.NewFARID(3),
 					ie.NewPDI(
 						ie.NewSourceInterface(ie.SrcInterfaceCore),
-						ie.NewUEIPAddress(0x2, "172.16.0.1", "", 0, 0),
+						ie.NewNetworkInstanceFQDN("internet"),
+						ie.NewUEIPAddress(0x6, "172.16.0.1", "", 0, 0),
 					),
 					ie.NewQERID(4),
 				),

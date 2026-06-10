@@ -25,12 +25,12 @@ LABEL org.opencontainers.image.source="${VCS_URL}" \
     org.opencontainers.image.created="${BUILD_DATE}" \
     org.opencontainers.image.revision="${VCS_REF}" \
     org.opencontainers.image.url="${VCS_URL}" \
-    org.opencontainers.image.title="pfcpsim" \
-    org.opencontainers.image.description="Aether 5G Core PFCPSIM Network Function" \
+    org.opencontainers.image.title="pfcpsim-travelping" \
+    org.opencontainers.image.description="pfcpsim compatibility build for Travelping UPG-VPP load testing" \
     org.opencontainers.image.authors="Aether SD-Core <dev@lists.aetherproject.org>" \
-    org.opencontainers.image.vendor="Aether Project" \
+    org.opencontainers.image.vendor="infinitydon" \
     org.opencontainers.image.licenses="Apache-2.0" \
-    org.opencontainers.image.documentation="https://docs.sd-core.aetherproject.org/"
+    org.opencontainers.image.documentation="https://github.com/infinitydon/pfcpsim-travelping"
 
 RUN apk add --no-cache tcpdump
 

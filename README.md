@@ -1,185 +1,125 @@
-<!--
-SPDX-FileCopyrightText: 2022-present Open Networking Foundation
-SPDX-FileCopyrightText: 2024-present Intel Corporation
+# pfcpsim for Travelping UPG-VPP
 
-SPDX-License-Identifier: Apache-2.0
+This repository is a compatibility build of
+[omec-project/pfcpsim](https://github.com/omec-project/pfcpsim) for PFCP session
+provisioning and GTP-U load testing against
+[Travelping UPG-VPP](https://github.com/travelping/upg-vpp).
 
--->
-[![Go Report Card](https://goreportcard.com/badge/github.com/omec-project/pfcpsim)](https://goreportcard.com/report/github.com/omec-project/pfcpsim)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/omec-project/pfcpsim/badge)](https://scorecard.dev/viewer/?uri=github.com/omec-project/pfcpsim)
+The `main` branch is based on upstream pfcpsim `v1.4.4`. It keeps the upstream
+Apache-2.0 license and history, with a small set of changes required by
+UPG-VPP `v2.0.0`.
 
-# pfcpsim
-pfcpsim is a PFCP simulator to interact with PFCP agents and can be used to
-simulate a 4G SGW-C or 5G SMF.
+## Container Image
 
-> All related features are implemented according to the 3GPP TS 29.244 V16.3.1 (2020-04).
-
-## Overview
-
-pfcpsim is designed to work within a containerized environment. The docker image
-comes with both client (`pfcpctl`) and server (`pfcpsim`).
-
-`PFCPClient` is embedded in a gRPC Server. Interaction between pfcpsim and pfcpctl
-is performed through RPCs, as shown in the following schema:
-
-![Alt text](docs/images/schema.svg)
-
-## Getting Started
-
-### Normal Case
-
-#### 1. Deploy container
-Note: Release images are available on [DockerHub](https://hub.docker.com/r/omecproject/pfcpsim/tags),
-while per-PR images are available on [Aether registry](https://registry.aetherproject.org/harbor/projects/9/repositories/pfcpsim/artifacts-tab)
-```bash
-docker container run --rm -d --name pfcpsim pfcpsim:<image_tag> -p 12345 --interface <interface-name>
-```
- - `-p` (**optional**, default is 54321): to set a custom gRPC listening port
- - `--interface` (**optional**, default is first non-loopback interface): to indicate a specific interface from which retrieve the local IP address
- - `PFCPSIM_LOG_LEVEL` (**optional**, default is `info`): set runtime log level via environment variable (`panic|fatal|error|warn|info|debug`)
-
-Example with debug logs enabled:
-```bash
-docker container run --rm -d --name pfcpsim -e PFCPSIM_LOG_LEVEL=debug pfcpsim:<image_tag> -p 12345 --interface <interface-name>
+```text
+ghcr.io/infinitydon/pfcpsim-travelping:v1.4.4-7
 ```
 
-#### 2. Use `pfcpctl` to configure server's remote peer address and N3 interface address:
-```bash
-docker exec pfcpsim pfcpctl -s localhost:12345 service configure --n3-addr <N3-interface-address> --remote-peer-addr <PFCP-server-address>
-```
- - `-s`/`--server`: (**optional**, default is 'localhost:54321') the gRPC server address.
- - `service`: selects the service subparser.
- - `configure`: selects the Configure RPC that allows to set the addresses of the N3 interface and the remote PFCP agent peer.
- - `--n3-addr`: address of the N3 Interface between UPF and nodeB.
- - `--remote-peer-addr`: address of the PFCP server. It supports the override of the IANA PFCP port (e.g. `10.0.0.1:8888`).
+Build locally:
 
-To list all the available commands just append `--help`, when executing `pfcpctl`.
-
-#### 3. `associate` command will connect to remote peer set in the previous configuration step and perform an association.
-```bash
-docker exec pfcpsim pfcpctl -s localhost:12345 service associate
+```sh
+docker build -t pfcpsim-travelping:local .
 ```
 
-#### 4. Create 5 sessions
-```bash
-docker exec pfcpsim pfcpctl -s localhost:12345 session create --count 5 --baseID 2 --ue-pool <CIDR-IP-pool> --gnb-addr <GNodeB-address> --sdf-filter 'permit out ip from 0.0.0.0/0 to assigned 81-81'
-```
- - `--count` the amount of sessions to create
- - `--baseID` the base ID used to incrementally create sessions
- - `--ue-pool` the IP pool from which UE addresses will be generated (e.g. `17.0.0.0/24`)
- - `--gnb-addr` the (e/g)NodeB address
- - `--sdf-filter` (optional) the SDF Filter to use when creating PDRs. If not set, PDI will contain a SDF Filter IE with an empty string as SDF Filter.
+## Compatibility Changes
 
-#### 5. Delete the sessions
-```bash
-docker exec pfcpsim pfcpctl --server localhost:12345 session delete --count 5 --baseID 2
-```
+The following differences from upstream `v1.4.4` are intentional:
 
-#### 6. `disassociate` command will perform disassociation and close connection with remote peer.
-```bash
-docker exec pfcpsim pfcpctl --server localhost:12345 service disassociate
-```
+1. Add PFCP Network Instance IEs:
+   - `access` for access-side PDRs and FARs.
+   - `internet` for core-side PDRs and FARs.
+2. Mark the UE IPv4 address in downlink PDRs as a destination address using
+   the PFCP `SD` flag.
+3. Do not add a zero-address Outer Header Creation IE to the initial dropped
+   downlink FAR. UPG-VPP rejects that placeholder.
+4. Respond to PFCP Heartbeat Requests so the UPF can retain the association.
+5. Omit periodic URRs from bulk session establishment. They can generate
+   enough reports to exhaust pfcpsim's synchronous response timeout while
+   creating many sessions.
+6. Set session and application QER MBR values to 1 Gbps so load tests measure
+   the data path rather than the low upstream test defaults.
 
-### Fuzzing Mode
+These changes target forwarding load tests. This branch is not intended to
+replace upstream pfcpsim for general PFCP conformance testing.
 
-Pfcpsim is able to generate malformed PFCP messages and can be used to explore potential vulnerabilities of PFCP agents (UPF).
+## Running
 
-> Note:
-> PFCP fuzzer is developed by the [Ian Chen (free5GC team)](https://github.com/ianchen0119)
-> PFCP fuzzer was used to test the UPF implementation of the free5GC project, and successfully found some vulnerabilities.
+The container includes both `pfcpsim` and `pfcpctl`.
 
-To use the PFCP fuzzer, we need to prepare the fuzzing environment first. The following steps show how to use the PFCP fuzzer.
-
-#### 1. Launch the UPF instance
-
-Pfcpsim supports to test various UPF implementations.
-You can choose the UPF implementation you want to test, and launch the UPF instance.
-
-#### 2. Change the configuration in `fuzz/ie_fuzz_test.go`
-
-You should change the configuration in `fuzz/ie_fuzz_test.go`:
-```go=
-sim := export.NewPfcpSimCfg(iface, upfN3, upfN4)
-```
-- `iface`: the interface name you used to establish the connection with UPF.
-- `upfN3`: the N3 interface address of the UPF.
-- `upfN4`: the N4 interface address of the UPF.
-
-#### 3. Run the fuzzing test
-
-You can run the fuzzing test by the following command:
-```
-go test -fuzz=Fuzz -p 1 -parallel 1 -fuzztime 15m ./fuzz/...
-```
-To specify args:
-```
-go test -fuzz=Fuzz -p 1 -parallel 1 -fuzztime 15m ./fuzz/... -args -iface=lo -upfN3=192.168.0.5 -upfN4=127.0.0.8
-```
-- `-fuzztime`: the time you want to run the fuzzing test.
-- Do not change the value of either `-parallel` or `-p` flag because it will cause the race condition.
-- The output for the fuzzing test looks like this:
-```
-fuzz: elapsed: 0s, gathering baseline coverage: 0/100 completed
-fuzz: elapsed: 3s, gathering baseline coverage: 0/100 completed
-...
-fuzz: elapsed: 13m21s, gathering baseline coverage: 99/100 completed
-fuzz: elapsed: 13m21s, gathering baseline coverage: 100/100 completed, now fuzzing with 1 workers
-fuzz: elapsed: 13m24s, execs: 100 (0/sec), new interesting: 0 (total: 100)
-...
-fuzz: elapsed: 15m1s, execs: 111 (0/sec), new interesting: 0 (total: 100)
-PASS
-ok  	github.com/omec-project/pfcpsim/fuzz	900.684s
-```
-- If the test result shows "PASS" and the UPF didn't crash, it means that the fuzzy test was successful!
-
-- If Pfcpsim can't connect to the UPF, the user will see an output like this:
-```
-...
-failure while testing seed corpus entry: Fuzz/seed#0
-fuzz: elapsed: 5s, gathering baseline coverage: 0/106 completed
---- FAIL: Fuzz (5.02s)
-    --- FAIL: Fuzz (5.00s)
-        ie_fuzz_test.go:57:
-                Error Trace:    /home/xxxx/pfcpsim/fuzz/ie_fuzz_test.go:57
-                                                        /usr/local/go/src/reflect/value.go:556
-                                                        /usr/local/go/src/reflect/value.go:339
-                                                        /usr/local/go/src/testing/fuzz.go:337
-                Error:          Received unexpected error:
-                                route ip+net: no such network interface
-                Test:           Fuzz
-                Messages:       InitPFCPSim failed
-
-FAIL
-exit status 1
-FAIL    github.com/omec-project/pfcpsim/fuzz    5.023s
+```sh
+docker run --rm --network host \
+  --name pfcpsim-travelping \
+  ghcr.io/infinitydon/pfcpsim-travelping:v1.4.4-7 \
+  --interface n4
 ```
 
-## Compile binaries
-If you don't want to use docker you can just compile the binaries of `pfcpsim` and `pfcpctl`:
+Configure and associate it with UPG-VPP:
 
-#### 1. Git clone this repository
-```bash
-git clone https://github.com/omec-project/pfcpsim && cd pfcpsim/
+```sh
+docker exec pfcpsim-travelping pfcpctl -s localhost:54321 \
+  service configure \
+  --n3-addr 10.0.3.10 \
+  --remote-peer-addr 10.0.4.9:8805
+
+docker exec pfcpsim-travelping pfcpctl -s localhost:54321 \
+  service associate
 ```
 
-#### 2. Compile pfcpsim
-```bash
-go build -o server cmd/pfcpsim/main.go
+Create 1,000 sessions:
+
+```sh
+docker exec pfcpsim-travelping pfcpctl -s localhost:54321 \
+  session create \
+  --count 1000 \
+  --baseID 1 \
+  --gnb-addr 10.0.3.1 \
+  --ue-pool 48.0.0.0/16 \
+  --qfi 9
 ```
 
-#### 3. Compile pfcpctl
-```bash
-go build -o client cmd/pfcpctl/main.go
+The generated uplink TEIDs begin at `1` and increment by `10`. UE addresses
+begin at `48.0.0.1`.
+
+## Kubernetes
+
+For a Multus-attached N4 interface, run the simulator with:
+
+```yaml
+command: ["pfcpsim"]
+args: ["--interface", "n4"]
 ```
 
-You can now place `server` and `client` wherever you want.
-To setup `pfcpsim` use the same steps shown above (without executing `docker`)
-as shown below:
-```bash
-./server -p 12345 --interface <interface-name>
+The associated Helm chart is maintained separately in the
+`trex-travelping` workspace. It binds the N4 PCI device, provisions 1,000
+sessions, and runs a Cisco TRex GTP-U profile.
+
+The validated setup used:
+
+- Travelping UPG-VPP `v2.0.0`
+- pfcpsim base `v1.4.4`
+- Cisco TRex `v3.06`
+- 1,000 PFCP sessions
+- 100,000 packets per second for 15 seconds
+- 1,500,001 transmitted test packets
+- 0% measured packet loss
+
+## Development
+
+```sh
+go test ./...
+docker build -t pfcpsim-travelping:dev .
 ```
 
-## Reach out to us through
+The upstream remote can be retained as:
 
-1. #sdcore-dev channel in [Aether Community Slack](https://aether5g-project.slack.com)
-2. Raise Github Issues
+```sh
+git remote add upstream https://github.com/omec-project/pfcpsim.git
+```
+
+## Upstream And License
+
+Original project:
+[github.com/omec-project/pfcpsim](https://github.com/omec-project/pfcpsim)
+
+This repository preserves the upstream Apache-2.0 licensing information in
+`LICENSES/` and the source file SPDX headers.

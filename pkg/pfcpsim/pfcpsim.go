@@ -186,7 +186,13 @@ func (c *PFCPClient) receiveFromN4() {
 			case *message.HeartbeatResponse:
 				c.heartbeatsChan <- msg
 			case *message.HeartbeatRequest:
-				// ignore HeartbeatRequest
+				resp := message.NewHeartbeatResponse(
+					msg.Sequence(),
+					ieLib.NewRecoveryTimeStamp(time.Now()),
+				)
+				if err := c.sendMsg(resp); err != nil {
+					logger.PfcpsimLog.Errorln("failed to send Heartbeat Response:", err)
+				}
 				continue
 			case *message.SessionReportRequest:
 				if c.handleSessionReportRequest(msg) {

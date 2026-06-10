@@ -110,6 +110,7 @@ func TestFARBuilder(t *testing.T) {
 				ie.NewApplyAction(ActionForward),
 				ie.NewForwardingParameters(
 					ie.NewDestinationInterface(ie.DstInterfaceAccess),
+					ie.NewNetworkInstanceFQDN("access"),
 				),
 			),
 			description: "Valid FAR",
@@ -127,6 +128,7 @@ func TestFARBuilder(t *testing.T) {
 				ie.NewApplyAction(ActionForward|ActionBuffer),
 				ie.NewForwardingParameters(
 					ie.NewDestinationInterface(ie.DstInterfaceAccess),
+					ie.NewNetworkInstanceFQDN("access"),
 					ie.NewOuterHeaderCreation(S_TAG, 12, "10.0.0.1", "", 0, 0, 0),
 				),
 			),
@@ -143,6 +145,7 @@ func TestFARBuilder(t *testing.T) {
 				ie.NewApplyAction(ActionForward|ActionBuffer|ActionNotify),
 				ie.NewForwardingParameters(
 					ie.NewDestinationInterface(ie.DstInterfaceAccess),
+					ie.NewNetworkInstanceFQDN("access"),
 				),
 			),
 			description: "Valid FAR actions with 3 flags",

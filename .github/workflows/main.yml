@@ -1,122 +1,51 @@
-# SPDX-License-Identifier: Apache-2.0
-# Copyright 2022-present Open Networking Foundation
-# Copyright 2024-present Intel Corporation
-name: CI Pipeline
+name: CI
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
-    branches:
-      - main
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    permissions:
-      contents: read
-      actions: read
-      security-events: write
-      id-token: write
-      attestations: write
-    uses: omec-project/.github/.github/workflows/build.yml@0bce626c84023cadf638ceff2af19c73a7201bf8 # v0.0.26
-    with:
-      branch_name: ${{ github.ref }}
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go test -timeout 60s ./pkg/pfcpsim/session ./internal/pfcpsim ./pkg/pfcpsim
 
-  docker-build:
+  container:
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-      id-token: write
-      attestations: write
-    uses: omec-project/.github/.github/workflows/docker-build.yml@0bce626c84023cadf638ceff2af19c73a7201bf8 # v0.0.26
-    with:
-      branch_name: ${{ github.ref }}
-
-  static-analysis:
-    permissions:
-      contents: read
-      security-events: write
-      actions: read
-      id-token: write
-      attestations: write
-    uses: omec-project/.github/.github/workflows/static-analysis.yml@0bce626c84023cadf638ceff2af19c73a7201bf8 # v0.0.26
-    with:
-      branch_name: ${{ github.ref }}
-
-  lint:
-    permissions:
-      contents: read
-      checks: write
-      id-token: write
-      attestations: write
-    uses: omec-project/.github/.github/workflows/lint.yml@0bce626c84023cadf638ceff2af19c73a7201bf8 # v0.0.26
-    with:
-      branch_name: ${{ github.ref }}
-
-  hadolint:
-    permissions:
-      contents: read
-      security-events: write
-      id-token: write
-      attestations: write
-    uses: omec-project/.github/.github/workflows/hadolint.yml@0bce626c84023cadf638ceff2af19c73a7201bf8 # v0.0.26
-    with:
-      branch_name: ${{ github.ref }}
-
-  license-check:
-    permissions:
-      contents: read
-      id-token: write
-      attestations: write
-    uses: omec-project/.github/.github/workflows/license-check.yml@0bce626c84023cadf638ceff2af19c73a7201bf8 # v0.0.26
-    with:
-      branch_name: ${{ github.ref }}
-
-  fossa-scan:
-    permissions:
-      contents: read
-      security-events: write
-      id-token: write
-      attestations: write
-    uses: omec-project/.github/.github/workflows/fossa-scan.yml@0bce626c84023cadf638ceff2af19c73a7201bf8 # v0.0.26
-    with:
-      branch_name: ${{ github.ref }}
-
-  unit-tests:
-    permissions:
-      contents: read
-      checks: write
-      id-token: write
-      attestations: write
-    uses: omec-project/.github/.github/workflows/unit-test.yml@0bce626c84023cadf638ceff2af19c73a7201bf8 # v0.0.26
-    with:
-      branch_name: ${{ github.ref }}
-      test_flags: "-race -covermode=atomic -run=^Test -v"
-
-  analysis:
-    if: github.repository_owner == 'omec-project'
-    permissions:
-      actions: read
-      artifact-metadata: read
-      attestations: read
-      checks: read
-      contents: read
-      deployments: read
-      discussions: read
-      id-token: write
-      issues: read
-      models: read
-      packages: read
-      pages: read
-      pull-requests: read
-      repository-projects: read
-      security-events: write
-      statuses: read
-      vulnerability-alerts: read
-    uses: omec-project/.github/.github/workflows/scorecard-analysis.yml@0bce626c84023cadf638ceff2af19c73a7201bf8 # v0.0.26
-    with:
-      branch_name: ${{ github.ref }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/pfcpsim-travelping
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

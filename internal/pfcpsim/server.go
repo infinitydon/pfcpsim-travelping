@@ -172,8 +172,8 @@ func (P pfcpSimService) CreateSession(ctx context.Context, request *pb.CreateSes
 			session.NewQERBuilder().
 				WithID(sessQerID).
 				WithMethod(session.Create).
-				WithUplinkMBR(60000).
-				WithDownlinkMBR(60000).
+				WithUplinkMBR(1_000_000_000).
+				WithDownlinkMBR(1_000_000_000).
 				Build(),
 		}
 
@@ -264,7 +264,6 @@ func (P pfcpSimService) CreateSession(ctx context.Context, request *pb.CreateSes
 				WithAction(session.ActionDrop).
 				WithMethod(session.Create).
 				WithDstInterface(ieLib.DstInterfaceAccess).
-				WithZeroBasedOuterHeaderCreation().
 				BuildFAR()
 
 			fars = append(fars, uplinkFAR)
@@ -274,8 +273,8 @@ func (P pfcpSimService) CreateSession(ctx context.Context, request *pb.CreateSes
 				WithID(uplinkAppQerID).
 				WithMethod(session.Create).
 				WithQFI(qfi).
-				WithUplinkMBR(50000).
-				WithDownlinkMBR(30000).
+				WithUplinkMBR(1_000_000_000).
+				WithDownlinkMBR(1_000_000_000).
 				WithGateStatus(gateStatus).
 				Build()
 
@@ -283,8 +282,8 @@ func (P pfcpSimService) CreateSession(ctx context.Context, request *pb.CreateSes
 				WithID(downlinkAppQerID).
 				WithMethod(session.Create).
 				WithQFI(qfi).
-				WithUplinkMBR(50000).
-				WithDownlinkMBR(30000).
+				WithUplinkMBR(1_000_000_000).
+				WithDownlinkMBR(1_000_000_000).
 				WithGateStatus(gateStatus).
 				Build()
 
@@ -293,6 +292,10 @@ func (P pfcpSimService) CreateSession(ctx context.Context, request *pb.CreateSes
 
 			ID += 2
 		}
+
+		// Periodic URRs overwhelm bulk session creation with report traffic.
+		// This image is dedicated to forwarding load tests, so omit them.
+		urrs = nil
 
 		sess, err := sim.EstablishSession(pdrs, fars, qers, urrs)
 		if err != nil {

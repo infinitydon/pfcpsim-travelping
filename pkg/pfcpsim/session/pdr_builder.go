@@ -170,7 +170,9 @@ func (b *pdrBuilder) BuildPDR() *ie.IE {
 	if b.direction == downlink {
 		pdi := ie.NewPDI(
 			ie.NewSourceInterface(ie.SrcInterfaceCore),
-			ie.NewUEIPAddress(0x2, b.ueAddress, "", 0, 0),
+			ie.NewNetworkInstanceFQDN("internet"),
+			// SD marks the UE address as the destination for downlink matching.
+			ie.NewUEIPAddress(0x6, b.ueAddress, "", 0, 0),
 		)
 
 		if b.sdfFilter != "" {
@@ -196,6 +198,7 @@ func (b *pdrBuilder) BuildPDR() *ie.IE {
 	// UplinkPDR
 	pdi := ie.NewPDI(
 		ie.NewSourceInterface(ie.SrcInterfaceAccess),
+		ie.NewNetworkInstanceFQDN("access"),
 		ie.NewFTEID(0x01, b.teid, net.ParseIP(b.n3Address), nil, 0),
 	)
 

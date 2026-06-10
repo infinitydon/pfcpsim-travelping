@@ -118,12 +118,18 @@ func (b *farBuilder) BuildFAR() *ie.IE {
 	fwdParams := ie.NewForwardingParameters(
 		ie.NewDestinationInterface(b.dstInterface),
 	)
+	networkInstance := "internet"
+	if b.dstInterface == ie.DstInterfaceAccess {
+		networkInstance = "access"
+	}
+	fwdParams.Add(ie.NewNetworkInstanceFQDN(networkInstance))
 
 	createFunc := ie.NewCreateFAR
 	if b.method == Update {
 		createFunc = ie.NewUpdateFAR
 		fwdParams = ie.NewUpdateForwardingParameters(
 			ie.NewDestinationInterface(b.dstInterface),
+			ie.NewNetworkInstanceFQDN(networkInstance),
 		)
 	}
 
