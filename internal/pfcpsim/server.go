@@ -93,6 +93,15 @@ func (P pfcpSimService) Associate(ctx context.Context, empty *pb.EmptyRequest) (
 		}
 	}
 
+	if sim.IsAssociationAlive() {
+		infoMsg := "Association already established"
+		logger.PfcpsimLog.Infoln(infoMsg)
+		return &pb.Response{
+			StatusCode: int32(codes.OK),
+			Message:    infoMsg,
+		}, nil
+	}
+
 	if err := sim.SetupAssociation(); err != nil {
 		logger.PfcpsimLog.Errorln(err)
 		return &pb.Response{}, status.Error(codes.Aborted, err.Error())

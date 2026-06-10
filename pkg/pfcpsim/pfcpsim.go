@@ -84,6 +84,8 @@ type PFCPClient struct {
 
 	aliveLock           sync.Mutex
 	isAssociationActive bool
+	heartbeatOnce       sync.Once
+	recoveryTimestamp   time.Time
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -104,9 +106,10 @@ type PFCPClient struct {
 
 func NewPFCPClient(localAddr string) *PFCPClient {
 	client := &PFCPClient{
-		sequenceNumber:  0,
-		localAddr:       localAddr,
-		responseTimeout: DefaultResponseTimeout,
+		sequenceNumber:    0,
+		localAddr:         localAddr,
+		responseTimeout:   DefaultResponseTimeout,
+		recoveryTimestamp: time.Now(),
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -320,7 +323,7 @@ func (c *PFCPClient) SendAssociationSetupRequest(ie ...*ieLib.IE) error {
 
 	assocReq := message.NewAssociationSetupRequest(
 		c.getNextSequenceNumber(),
-		ieLib.NewRecoveryTimeStamp(time.Now()),
+		ieLib.NewRecoveryTimeStamp(c.recoveryTimestamp),
 		ieLib.NewNodeID(c.localAddr, "", ""),
 	)
 
@@ -350,7 +353,7 @@ func (c *PFCPClient) SendAssociationTeardownRequest(ie ...*ieLib.IE) error {
 func (c *PFCPClient) SendHeartbeatRequest() error {
 	hbReq := message.NewHeartbeatRequest(
 		c.getNextSequenceNumber(),
-		ieLib.NewRecoveryTimeStamp(time.Now()),
+		ieLib.NewRecoveryTimeStamp(c.recoveryTimestamp),
 		ieLib.NewSourceIPAddress(net.ParseIP(c.localAddr), nil, 0),
 	)
 
@@ -477,7 +480,9 @@ func (c *PFCPClient) SetupAssociation() error {
 
 	c.setAssociationStatus(true)
 
-	go c.StartHeartbeats()
+	c.heartbeatOnce.Do(func() {
+		go c.StartHeartbeats()
+	})
 
 	return nil
 }
