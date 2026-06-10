@@ -51,3 +51,14 @@ func TestHeartbeatWorkerCanOnlyStartOnce(t *testing.T) {
 		t.Fatalf("expected one heartbeat worker, got %d", started)
 	}
 }
+
+func TestResetSessions(t *testing.T) {
+	InsertSession(1, &PFCPSession{})
+	InsertSession(11, &PFCPSession{})
+
+	ResetSessions()
+
+	if count := GetActiveSessionNum(); count != 0 {
+		t.Fatalf("expected no active sessions after reset, got %d", count)
+	}
+}

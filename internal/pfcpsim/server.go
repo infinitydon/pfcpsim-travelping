@@ -128,7 +128,9 @@ func (P pfcpSimService) Disassociate(ctx context.Context, empty *pb.EmptyRequest
 
 	sim.DisconnectN4()
 
+	sim = nil
 	remotePeerConnected = false
+	pfcpsim.ResetSessions()
 
 	infoMsg := "Association teardown completed and connection to remote peer closed"
 	logger.PfcpsimLog.Infoln(infoMsg)

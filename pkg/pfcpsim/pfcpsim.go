@@ -72,6 +72,13 @@ func RemoveSession(index int) {
 	delete(activeSessions, index)
 }
 
+func ResetSessions() {
+	lockActiveSessions.Lock()
+	defer lockActiveSessions.Unlock()
+
+	activeSessions = make(map[int]*PFCPSession)
+}
+
 // PFCPClient enables to simulate a client sending PFCP messages towards the UPF.
 // It provides two usage modes:
 //   - 1st mode enables high-level PFCP operations (e.g., SetupAssociation())
@@ -191,7 +198,7 @@ func (c *PFCPClient) receiveFromN4() {
 			case *message.HeartbeatRequest:
 				resp := message.NewHeartbeatResponse(
 					msg.Sequence(),
-					ieLib.NewRecoveryTimeStamp(time.Now()),
+					ieLib.NewRecoveryTimeStamp(c.recoveryTimestamp),
 				)
 				if err := c.sendMsg(resp); err != nil {
 					logger.PfcpsimLog.Errorln("failed to send Heartbeat Response:", err)
