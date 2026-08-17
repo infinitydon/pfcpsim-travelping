@@ -3,7 +3,7 @@
 # Copyright 2024-present Intel Corporation
 
 # Stage pfcpsim-build: builds the pfcpsim docker image
-FROM golang:1.26.2-bookworm@sha256:47ce5636e9936b2c5cbf708925578ef386b4f8872aec74a67bd13a627d242b19 AS builder
+FROM golang:1.26.6-bookworm@sha256:116d58cbd88c1297624acc6e967a060012422bacf9930927e23fb719189c6f36 AS builder
 WORKDIR /pfcpctl
 
 COPY . .
